@@ -8,7 +8,7 @@ Three tools exposed to the agent:
 
 | Tool | When to call | Max words spoken |
 |---|---|---|
-| `speak_summary(headline, details="")` | Task the user will care about is done | ~15 |
+| `speak_summary(headline, details="")` | Task the user will care about is done | ~50 |
 | `speak_status(message)` | Progress heartbeat during long tasks (server throttles to 1/min) | ~10 |
 | `speak_blocker(question)` | Agent is stuck; needs user input. Bypasses quiet hours, interrupts speech. | ~20 |
 
