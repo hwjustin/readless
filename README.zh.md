@@ -57,34 +57,7 @@ claude mcp list
 
 ## 告诉 agent 怎么用
 
-把 [CLAUDE_EXAMPLE.md](./CLAUDE_EXAMPLE.md) 里的段落贴到 `~/.claude/CLAUDE.md` 或某个项目的 `CLAUDE.md`。这是调节 agent 行为的杠杆——如果 agent 太啰嗦或太安静，改这个段落，不是改代码。
-
-只靠 CLAUDE.md 是模型"自觉"调用，不稳定。想要每轮稳定播报，还要装下面的 Stop hook。
-
-## Stop hook（推荐）
-
-[`hooks/readless_stop.py`](./hooks/readless_stop.py) 是 Claude Code 的 **Stop hook**：在 agent 想结束本轮回复时扫一下，如果本轮没有调用过 `speak_summary`，就 block 掉这次结束，让模型必须调一次再收尾。headline 依然由模型自己写，hook 只保证调用一定发生。
-
-在 `~/.claude/settings.json` 里加：
-
-```json
-{
-  "hooks": {
-    "Stop": [
-      {
-        "matcher": "",
-        "hooks": [
-          { "type": "command", "command": "python3 /绝对路径/到/readless/hooks/readless_stop.py" }
-        ]
-      }
-    ]
-  }
-}
-```
-
-把路径换成你 clone 下来的仓库里的绝对路径（`cd readless` 后用 `$(pwd)/hooks/readless_stop.py`）。重启 Claude Code，之后每一轮 agent 回复结束前都会自动播报一条总结。
-
-想关掉就从 `settings.json` 里删掉这段。
+把 [CLAUDE_EXAMPLE.md](./CLAUDE_EXAMPLE.md) 里的段落贴到 `~/.claude/CLAUDE.md` 或某个项目的 `CLAUDE.md`。这是调节 agent 行为的真正杠杆——如果 agent 太啰嗦或太安静，改这个段落，不是改代码。
 
 ## 验证
 
@@ -128,8 +101,6 @@ src/readless/
   config.py    YAML + 环境变量加载 + 静音时段计算
   throttle.py  StatusThrottle（带测试）
   logger.py    JSONL 追加写
-hooks/
-  readless_stop.py  Claude Code Stop hook（强制每轮调用 speak_summary）
 tests/
   test_throttle.py
 ```
