@@ -15,21 +15,13 @@ Three tools exposed to the agent:
 ```bash
 git clone https://github.com/hwjustin/readless.git
 cd readless
-python3 -m venv .venv
-.venv/bin/pip install -e .
-
-# 1. Drop in a config (or skip and let the server auto-create it on first run)
-mkdir -p ~/.readless && cp config.example.yaml ~/.readless/config.yaml
-# edit ~/.readless/config.yaml and paste your OPENAI_API_KEY (or export it as an env var — env wins)
-
-# 2. Register with Claude Code (use the absolute path to the venv python)
-claude mcp add --scope user readless -- "$(pwd)/.venv/bin/python" -m readless.server
-claude mcp list   # should show readless ✓
-
-# 3. Paste the block from CLAUDE_EXAMPLE.md into ~/.claude/CLAUDE.md
+./install.sh
+# then edit ~/.readless/config.yaml to paste your OPENAI_API_KEY,
+# paste the block from CLAUDE_EXAMPLE.md into ~/.claude/CLAUDE.md,
+# restart Claude Code, and ask it to call speak_summary.
 ```
 
-Restart Claude Code, then ask it to call `speak_summary` — your laptop should talk back.
+`install.sh` is idempotent: creates the venv, `pip install -e .`, seeds `~/.readless/config.yaml` from the example, and runs `claude mcp add --scope user`. Re-run anytime — it skips steps already done.
 
 ## Install (detail)
 
