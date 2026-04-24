@@ -1,5 +1,7 @@
 # readless
 
+[English](./README.md) · [中文](./README.zh.md)
+
 Local MCP server that lets Claude Code (and other MCP-aware agents) speak status, summaries, and blocking questions out loud via OpenAI TTS. Designed so you can step away from the screen during long agent tasks without losing situational awareness.
 
 Three tools exposed to the agent:
