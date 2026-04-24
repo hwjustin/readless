@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "readless"
+version = "0.1.0"
+description = "Local MCP server that lets coding agents speak status, summaries, and blockers via OpenAI TTS."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Justin Wang" }]
+dependencies = [
+    "mcp>=1.2",
+    "openai>=1.50",
+    "sounddevice>=0.4.6",
+    "numpy>=1.26",
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+readless = "readless.server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

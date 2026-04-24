@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.DS_Store
+
+# Never commit a real config — only config.example.yaml lives in the repo.
+config.yaml
+.readless/

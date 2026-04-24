@@ -1,0 +1,19 @@
+# Copy to ~/.readless/config.yaml and fill in your key (or set OPENAI_API_KEY env var — env wins).
+# First server launch will auto-create ~/.readless/config.yaml from defaults if missing.
+
+openai_api_key: ""        # paste sk-... here, or leave empty and use env var
+voice: alloy              # alloy / echo / fable / onyx / nova / shimmer
+speed: 1.1                # 1.0 - 1.3
+language_hint: zh         # hint for TTS pronunciation; "en", "zh", etc.
+
+quiet_hours:
+  start: "23:00"          # speak_summary / speak_status silenced inside this window
+  end: "08:00"            # speak_blocker always plays
+
+tools:
+  speak_status: true
+  speak_summary: true
+  speak_blocker: true
+
+status_throttle_seconds: 60
+log_path: ~/.readless/log.jsonl
