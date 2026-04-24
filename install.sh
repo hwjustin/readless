@@ -54,5 +54,9 @@ cat <<EOF
 ==> done. Next steps:
   1. Put your OpenAI key in $CONFIG_FILE (or export OPENAI_API_KEY).
   2. Paste the block from $REPO_DIR/CLAUDE_EXAMPLE.md into ~/.claude/CLAUDE.md.
-  3. Restart Claude Code, then ask it to call speak_summary to verify.
+  3. (Recommended) Register the Stop hook so every turn ends with a spoken summary.
+     Add to ~/.claude/settings.json under "hooks.Stop":
+       { "type": "command", "command": "python3 $REPO_DIR/hooks/readless_stop.py" }
+     See README "Stop hook" section for the full JSON.
+  4. Restart Claude Code, then ask it to call speak_summary to verify.
 EOF
