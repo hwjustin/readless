@@ -88,6 +88,10 @@ All tool calls append to `~/.readless/log.jsonl`:
 - **Claude Code doesn't see the server**: run `claude mcp list` — if missing, re-run the `claude mcp add` command with the absolute venv python path. Restart Claude Code after adding.
 - **Tool returns `throttled` a lot**: by design — `speak_status` caps at one speech per minute. Lower `status_throttle_seconds` in the yaml if you want tighter pings.
 
+## License
+
+Apache 2.0 — see [LICENSE](./LICENSE).
+
 ## Design notes
 
 - `speak_status` throttling is server-side and stateless across restarts. The agent calling "too often" is not an error condition.

@@ -9,6 +9,7 @@ description = "Local MCP server that lets coding agents speak status, summaries,
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{ name = "Justin Wang" }]
+license = { text = "Apache-2.0" }
 dependencies = [
     "mcp>=1.2",
     "openai>=1.50",
