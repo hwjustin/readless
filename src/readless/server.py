@@ -22,7 +22,7 @@ async def speak_summary(headline: str, details: str = "") -> str:
     bug fixed, research concluded. Don't call for trivial back-and-forth.
 
     Args:
-        headline: Spoken aloud. Keep to <= 15 words. No code, no paths.
+        headline: Spoken aloud. Keep to <= 50 words. No code, no paths.
                   Use the user's main language (Chinese for this user).
         details: Not spoken. Appended to the log for later reference.
 

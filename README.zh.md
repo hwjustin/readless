@@ -8,7 +8,7 @@
 
 | 工具 | 调用时机 | 最大词数 |
 |---|---|---|
-| `speak_summary(headline, details="")` | 用户会关心的任务节点完成时 | ~15 |
+| `speak_summary(headline, details="")` | 用户会关心的任务节点完成时 | ~50 |
 | `speak_status(message)` | 长任务中间报进度（服务端限频 1 次/分钟） | ~10 |
 | `speak_blocker(question)` | Agent 卡住，需要用户输入。绕过静音时段，打断正在播报的语音。 | ~20 |
 
