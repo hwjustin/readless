@@ -57,7 +57,34 @@ To remove: `claude mcp remove readless --scope user`.
 
 ## Tell your agent to use it
 
-Paste the block in [CLAUDE_EXAMPLE.md](./CLAUDE_EXAMPLE.md) into `~/.claude/CLAUDE.md` or a project `CLAUDE.md`. This is the actual lever for tuning behavior — if the agent is too chatty or too silent, edit that block, not the code.
+Paste the block in [CLAUDE_EXAMPLE.md](./CLAUDE_EXAMPLE.md) into `~/.claude/CLAUDE.md` or a project `CLAUDE.md`. This is the lever for tuning behavior — if the agent is too chatty or too silent, edit that block, not the code.
+
+CLAUDE.md alone relies on the model remembering to call the tool. For reliable "speak once per turn" behavior, also install the Stop hook below.
+
+## Stop hook (recommended)
+
+[`hooks/readless_stop.py`](./hooks/readless_stop.py) is a Claude Code **Stop hook**: it scans the current assistant turn and, if `speak_summary` wasn't called, blocks the turn from ending and asks the model to call it. The headline is still written by the model — the hook just guarantees a call happens.
+
+Register it in `~/.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          { "type": "command", "command": "python3 /absolute/path/to/readless/hooks/readless_stop.py" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Replace the path with the absolute path to the file in your cloned repo (`$(pwd)/hooks/readless_stop.py` after `cd readless`). Restart Claude Code. Every agent turn now ends with a spoken summary.
+
+Remove the entry from `settings.json` to disable.
 
 ## Verify
 
@@ -101,6 +128,8 @@ src/readless/
   config.py    YAML + env var loader + quiet-hours math
   throttle.py  StatusThrottle (tested)
   logger.py    JSONL append
+hooks/
+  readless_stop.py  Claude Code Stop hook (forces speak_summary per turn)
 tests/
   test_throttle.py
 ```
