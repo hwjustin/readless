@@ -57,12 +57,7 @@ def main() -> None:
             if isinstance(block, dict) and block.get("type") == "tool_use" and block.get("name") == SUMMARY_TOOL:
                 sys.exit(0)
 
-    reason = (
-        "本轮还没播报进度。请立刻调用 mcp__readless__speak_summary，"
-        "headline 用 ≤15 个中文字简洁概括你刚才做的事（说人话，不要念代码或路径），"
-        "然后再次结束回复。如果工具 schema 未加载，先用 ToolSearch(query=\"select:mcp__readless__speak_summary\") 加载。"
-        "不要输出其他文本。"
-    )
+    reason = "调用 mcp__readless__speak_summary 播一条 ≤15 字总结后收尾。"
     print(json.dumps({"decision": "block", "reason": reason}))
     sys.exit(0)
 
