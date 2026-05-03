@@ -1,6 +1,8 @@
-Paste the block below into `~/.claude/CLAUDE.md` (user-scope) or a project `CLAUDE.md`. Edit freely — this is the actual tuning surface for how chatty the agent is.
+Paste **one** of the language blocks below into `~/.claude/CLAUDE.md` (user-scope) or a project `CLAUDE.md` — pick the one matching your primary language. Edit freely; this is the actual tuning surface for how chatty the agent is.
 
 ---
+
+## 中文版
 
 # Readless 语音播报规则
 
