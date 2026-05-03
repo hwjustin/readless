@@ -2,7 +2,7 @@
 
 [English](./README.md) · [中文](./README.zh.md)
 
-本地 MCP server，让 Claude Code（及其他支持 MCP 的 agent）通过 OpenAI TTS 把状态、总结和阻塞问题"念"出来。设计目的是让你在 agent 跑长任务时可以离开屏幕，不丢失对进度的感知。
+本地 MCP server，让 Claude Code（及其他支持 MCP 的 agent）通过 OpenAI 或 ElevenLabs TTS 把状态、总结和阻塞问题"念"出来。设计目的是让你在 agent 跑长任务时可以离开屏幕，不丢失对进度的感知。
 
 暴露给 agent 的三个工具：
 
@@ -40,9 +40,14 @@ brew install portaudio
 
 ## 配置
 
-把 [`config.example.yaml`](./config.example.yaml) 拷到 `~/.readless/config.yaml`，填入 OpenAI key（或者在 shell 里 export `OPENAI_API_KEY` 环境变量——env 优先级更高）。如果该文件不存在，server 第一次启动也会自动生成默认配置。
+把 [`config.example.yaml`](./config.example.yaml) 拷到 `~/.readless/config.yaml`。如果该文件不存在，server 第一次启动也会自动生成默认配置。
 
-没填 key 也能跑——工具会把 `[readless:<kind>] <text>` 打到 stderr 并写入 JSONL log。可以在拿到 key 之前先把 MCP 链路调通。
+用 `tts_provider` 选 TTS 后端：
+
+- `openai`（默认）——填 `openai_api_key`，或者 export `OPENAI_API_KEY`。声音可选 `alloy`/`echo`/`fable`/`onyx`/`nova`/`shimmer`。
+- `elevenlabs`——填 `elevenlabs_api_key`，或者 export `ELEVENLABS_API_KEY`。设置 `elevenlabs_voice_id`（去 ElevenLabs voice library 抓一个），可选 `elevenlabs_model_id`（`eleven_flash_v2_5` 低延迟，`eleven_multilingual_v2` 高质量）。
+
+env 变量优先级高于 yaml。没填 key server 也能跑——工具打 `[readless] (no-key, provider=...)` 到 stderr，再写入 JSONL log。拿到 key 之前先把 MCP 链路调通很方便。
 
 ## 注册到 Claude Code
 
@@ -57,7 +62,7 @@ claude mcp list
 
 ## 告诉 agent 怎么用
 
-把 [CLAUDE_EXAMPLE.md](./CLAUDE_EXAMPLE.md) 里的段落贴到 `~/.claude/CLAUDE.md` 或某个项目的 `CLAUDE.md`。这是调节 agent 行为的真正杠杆——如果 agent 太啰嗦或太安静，改这个段落，不是改代码。
+把 [CLAUDE_EXAMPLE.md](./CLAUDE_EXAMPLE.md#中文版) 里的**中文版**段落贴到 `~/.claude/CLAUDE.md` 或某个项目的 `CLAUDE.md`（文件里中英两个版本都有，挑你母语对应那段）。这是调节 agent 行为的真正杠杆——如果 agent 太啰嗦或太安静，改这个段落，不是改代码。
 
 ## 验证
 

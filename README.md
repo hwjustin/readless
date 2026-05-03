@@ -2,7 +2,7 @@
 
 [English](./README.md) · [中文](./README.zh.md)
 
-Local MCP server that lets Claude Code (and other MCP-aware agents) speak status, summaries, and blocking questions out loud via OpenAI TTS. Designed so you can step away from the screen during long agent tasks without losing situational awareness.
+Local MCP server that lets Claude Code (and other MCP-aware agents) speak status, summaries, and blocking questions out loud via OpenAI or ElevenLabs TTS. Designed so you can step away from the screen during long agent tasks without losing situational awareness.
 
 Three tools exposed to the agent:
 
@@ -40,9 +40,14 @@ brew install portaudio
 
 ## Configure
 
-Copy [`config.example.yaml`](./config.example.yaml) to `~/.readless/config.yaml` and paste your OpenAI key (or set `OPENAI_API_KEY` in your shell — env var wins). First launch also auto-creates a default config if one doesn't exist.
+Copy [`config.example.yaml`](./config.example.yaml) to `~/.readless/config.yaml`. First launch also auto-creates a default config if one doesn't exist.
 
-Without a key the server still runs — tools print `[readless:<kind>] <text>` to stderr and log to JSONL. Useful for wiring up the MCP connection before the key lands.
+Pick your TTS backend with `tts_provider`:
+
+- `openai` (default) — paste `openai_api_key` or set `OPENAI_API_KEY`. Voice options: `alloy`/`echo`/`fable`/`onyx`/`nova`/`shimmer`.
+- `elevenlabs` — paste `elevenlabs_api_key` or set `ELEVENLABS_API_KEY`. Set `elevenlabs_voice_id` (grab one from the ElevenLabs voice library) and optionally `elevenlabs_model_id` (`eleven_flash_v2_5` for low latency, `eleven_multilingual_v2` for quality).
+
+Env var wins over the yaml. Without a key the server still runs — tools print `[readless] (no-key, provider=...)` to stderr and log to JSONL. Useful for wiring up the MCP connection before the key lands.
 
 ## Register with Claude Code
 
@@ -57,7 +62,7 @@ To remove: `claude mcp remove readless --scope user`.
 
 ## Tell your agent to use it
 
-Paste the block in [CLAUDE_EXAMPLE.md](./CLAUDE_EXAMPLE.md) into `~/.claude/CLAUDE.md` or a project `CLAUDE.md`. This is the actual lever for tuning behavior — if the agent is too chatty or too silent, edit that block, not the code.
+Paste the **English version** block from [CLAUDE_EXAMPLE.md](./CLAUDE_EXAMPLE.md#english-version) into `~/.claude/CLAUDE.md` or a project `CLAUDE.md` (the file has both Chinese and English blocks — pick the one matching your primary language). This is the actual lever for tuning behavior — if the agent is too chatty or too silent, edit that block, not the code.
 
 ## Verify
 

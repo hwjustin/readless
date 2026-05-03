@@ -12,9 +12,17 @@ CONFIG_DIR = Path.home() / ".readless"
 CONFIG_PATH = CONFIG_DIR / "config.yaml"
 
 DEFAULT_YAML = """\
+tts_provider: openai      # openai | elevenlabs
+
 openai_api_key: ""        # or set OPENAI_API_KEY env var
 voice: alloy              # alloy / echo / fable / onyx / nova / shimmer
-speed: 1.1                # 1.0 - 1.3
+
+# Used when tts_provider: elevenlabs (or set ELEVENLABS_API_KEY env var)
+elevenlabs_api_key: ""
+elevenlabs_voice_id: "JBFqnCBsd6RMkjVDRZzb"   # default: "George"
+elevenlabs_model_id: "eleven_flash_v2_5"
+
+speed: 1.1                # 1.0 - 1.3 (openai only; elevenlabs ignores)
 language_hint: zh
 quiet_hours:
   start: "23:00"
@@ -37,8 +45,12 @@ class ToolToggles:
 
 @dataclass
 class Config:
+    tts_provider: str = "openai"
     openai_api_key: str = ""
     voice: str = "alloy"
+    elevenlabs_api_key: str = ""
+    elevenlabs_voice_id: str = "JBFqnCBsd6RMkjVDRZzb"
+    elevenlabs_model_id: str = "eleven_flash_v2_5"
     speed: float = 1.1
     language_hint: str = "zh"
     quiet_start: Optional[time] = time(23, 0)
@@ -46,6 +58,12 @@ class Config:
     tools: ToolToggles = field(default_factory=ToolToggles)
     status_throttle_seconds: int = 60
     log_path: Path = Path("~/.readless/log.jsonl").expanduser()
+
+    @property
+    def has_tts_key(self) -> bool:
+        if self.tts_provider == "elevenlabs":
+            return bool(self.elevenlabs_api_key)
+        return bool(self.openai_api_key)
 
     def in_quiet_hours(self, now: Optional[datetime] = None) -> bool:
         if self.quiet_start is None or self.quiet_end is None:
@@ -78,10 +96,19 @@ def load_config() -> Config:
     tools_raw = raw.get("tools") or {}
 
     key = os.environ.get("OPENAI_API_KEY") or raw.get("openai_api_key") or ""
+    el_key = os.environ.get("ELEVENLABS_API_KEY") or raw.get("elevenlabs_api_key") or ""
+
+    provider = (raw.get("tts_provider") or "openai").lower().strip()
+    if provider not in ("openai", "elevenlabs"):
+        provider = "openai"
 
     return Config(
+        tts_provider=provider,
         openai_api_key=key,
         voice=raw.get("voice", "alloy"),
+        elevenlabs_api_key=el_key,
+        elevenlabs_voice_id=raw.get("elevenlabs_voice_id", "JBFqnCBsd6RMkjVDRZzb"),
+        elevenlabs_model_id=raw.get("elevenlabs_model_id", "eleven_flash_v2_5"),
         speed=float(raw.get("speed", 1.1)),
         language_hint=raw.get("language_hint", "zh"),
         quiet_start=_parse_time(qh.get("start")),
