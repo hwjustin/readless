@@ -1,9 +1,18 @@
-# Copy to ~/.readless/config.yaml and fill in your key (or set OPENAI_API_KEY env var — env wins).
-# First server launch will auto-create ~/.readless/config.yaml from defaults if missing.
+# Copy to ~/.readless/config.yaml and fill in your key (or set the matching env
+# var — env wins). First server launch auto-creates this file from defaults.
 
+tts_provider: openai      # openai | elevenlabs
+
+# --- OpenAI TTS ---
 openai_api_key: ""        # paste sk-... here, or leave empty and use env var
 voice: alloy              # alloy / echo / fable / onyx / nova / shimmer
-speed: 1.1                # 1.0 - 1.3
+
+# --- ElevenLabs TTS (used when tts_provider: elevenlabs) ---
+elevenlabs_api_key: ""                        # or set ELEVENLABS_API_KEY env var
+elevenlabs_voice_id: "JBFqnCBsd6RMkjVDRZzb"   # default: "George". Find IDs in the ElevenLabs voice library.
+elevenlabs_model_id: "eleven_flash_v2_5"      # eleven_flash_v2_5 (fast) / eleven_multilingual_v2 (quality) / eleven_turbo_v2_5
+
+speed: 1.1                # 1.0 - 1.3 (openai only; elevenlabs ignores)
 language_hint: zh         # hint for TTS pronunciation; "en", "zh", etc.
 
 quiet_hours:
