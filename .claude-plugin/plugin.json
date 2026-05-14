@@ -1,28 +1,14 @@
 {
   "name": "readless",
-  "version": "0.2.0",
-  "description": "Speak Claude Code activity out loud while you're AFK",
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/readless_hook.py"
-          }
-        ]
+  "version": "0.3.0",
+  "description": "Speak Claude Code activity out loud while you're AFK — agent-callable speak_summary / speak_status / speak_blocker tools via OS-native or API TTS.",
+  "mcpServers": {
+    "readless": {
+      "command": "python3",
+      "args": ["-m", "readless.server"],
+      "env": {
+        "PYTHONPATH": "${CLAUDE_PLUGIN_ROOT}/src"
       }
-    ],
-    "Notification": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/readless_hook.py"
-          }
-        ]
-      }
-    ]
+    }
   }
 }
