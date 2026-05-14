@@ -4,23 +4,19 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "readless"
-version = "0.1.0"
-description = "Local MCP server that lets coding agents speak status, summaries, and blockers via OpenAI TTS."
+version = "0.2.0"
+description = "Claude Code plugin that speaks per-turn summaries and blocker pings out loud via OS-native or API TTS."
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{ name = "Justin Wang" }]
 license = { text = "Apache-2.0" }
-dependencies = [
-    "mcp>=1.2",
-    "openai>=1.50",
-    "elevenlabs>=1.5",
-    "sounddevice>=0.4.6",
-    "numpy>=1.26",
-    "pyyaml>=6.0",
-]
+dependencies = []  # default 'system' backend has zero pip dependencies
 
-[project.scripts]
-readless = "readless.server:main"
+[project.optional-dependencies]
+yaml = ["pyyaml>=6.0"]  # nicer YAML parsing; built-in minimal parser used otherwise
+openai = ["openai>=1.50", "sounddevice>=0.4.6", "numpy>=1.26"]
+elevenlabs = ["elevenlabs>=1.5", "sounddevice>=0.4.6", "numpy>=1.26"]
+all = ["pyyaml>=6.0", "openai>=1.50", "elevenlabs>=1.5", "sounddevice>=0.4.6", "numpy>=1.26"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

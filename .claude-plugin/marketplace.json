@@ -1,0 +1,19 @@
+{
+  "name": "readless",
+  "owner": {
+    "name": "Justin Wang"
+  },
+  "metadata": {
+    "description": "Speak Claude Code activity out loud while you're AFK — per-turn summary and blocker pings via OS-native TTS (no API key required).",
+    "version": "0.2.0"
+  },
+  "plugins": [
+    {
+      "name": "readless",
+      "source": "./",
+      "description": "Hook-only voice plugin. Speaks the last assistant message on Stop and pings you when Claude is waiting on input. Defaults to free OS voices (macOS say / espeak-ng / Windows SAPI); OpenAI and ElevenLabs supported when a key is set.",
+      "category": "notifications",
+      "tags": ["tts", "voice", "afk", "notifications", "hooks"]
+    }
+  ]
+}

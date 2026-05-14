@@ -1,0 +1,28 @@
+{
+  "name": "readless",
+  "version": "0.2.0",
+  "description": "Speak Claude Code activity out loud while you're AFK",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/readless_hook.py"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/readless_hook.py"
+          }
+        ]
+      }
+    ]
+  }
+}
