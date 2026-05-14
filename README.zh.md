@@ -2,110 +2,81 @@
 
 [English](./README.md) · [中文](./README.zh.md)
 
-本地 MCP server，让 Claude Code（及其他支持 MCP 的 agent）通过 OpenAI 或 ElevenLabs TTS 把状态、总结和阻塞问题"念"出来。设计目的是让你在 agent 跑长任务时可以离开屏幕，不丢失对进度的感知。
+Claude Code 插件，每轮回复结束自动念出最后一段话，agent 卡住等用户输入时也会提醒——让你可以放心离开屏幕。
 
-暴露给 agent 的三个工具：
+两个 hook，不需要 MCP，也不需要往 `CLAUDE.md` 贴任何东西：
 
-| 工具 | 调用时机 | 最大词数 |
+| Hook | 触发时机 | 行为 |
 |---|---|---|
-| `speak_summary(headline, details="")` | 用户会关心的任务节点完成时 | ~50 |
-| `speak_status(message)` | 长任务中间报进度（服务端限频 1 次/分钟） | ~10 |
-| `speak_blocker(question)` | Agent 卡住，需要用户输入。绕过静音时段，打断正在播报的语音。 | ~20 |
+| `Stop` | Assistant 一轮回复结束 | 读取最后一条 assistant 消息，截短后念出来 |
+| `Notification` | Claude Code 请求权限 / 用户长时间未响应 | 打断当前语音，念出提示内容 |
 
-## 快速开始
+默认 TTS 用系统自带语音（macOS `say` / Linux `espeak-ng` / Windows SAPI），**完全不需要 API key**。想要更好音质就在配置里填 OpenAI 或 ElevenLabs 的 key。
 
-```bash
-git clone https://github.com/hwjustin/readless.git
-cd readless
-./install.sh
-# 然后编辑 ~/.readless/config.yaml 填入 OPENAI_API_KEY，
-# 把 CLAUDE_EXAMPLE.md 里的中文段落复制到 ~/.claude/CLAUDE.md，
-# 重启 Claude Code，让它调一次 speak_summary 验证。
+## 安装
+
+```
+/plugin marketplace add hwjustin/readless
+/plugin install readless
 ```
 
-`install.sh` 是幂等的：建 venv、`pip install -e .`、从 `config.example.yaml` 拷一份种子配置到 `~/.readless/config.yaml`、跑 `claude mcp add --scope user`。重复跑没事——已经做过的步骤会自动跳过。
+**默认 `system` backend 不需要任何 pip 包**——hook 脚本会向上找 plugin 目录里的 `src/` import `readless`，默认后端除 Python 3.11+ 外零依赖。
 
-## 安装（细节）
-
-```bash
-python3 -m venv .venv
-.venv/bin/pip install -e .
-```
-
-macOS 上 `sounddevice` 依赖 PortAudio。装失败时：
+想用云端 TTS 时，给 `/usr/bin/env python3` 解析到的那个 Python 装 extras：
 
 ```bash
-brew install portaudio
+pip install --user 'readless[openai] @ git+https://github.com/hwjustin/readless.git'
+# 或
+pip install --user 'readless[elevenlabs] @ git+https://github.com/hwjustin/readless.git'
 ```
 
-## 配置
+到此为止。打开 Claude Code 跑一轮对话，就能听到声音。
 
-把 [`config.example.yaml`](./config.example.yaml) 拷到 `~/.readless/config.yaml`。如果该文件不存在，server 第一次启动也会自动生成默认配置。
+## 配置（可选）
 
-用 `tts_provider` 选 TTS 后端：
+第一次运行自动从默认值生成 `~/.readless/config.yaml`。可以编辑：
 
-- `openai`（默认）——填 `openai_api_key`，或者 export `OPENAI_API_KEY`。声音可选 `alloy`/`echo`/`fable`/`onyx`/`nova`/`shimmer`。
-- `elevenlabs`——填 `elevenlabs_api_key`，或者 export `ELEVENLABS_API_KEY`。设置 `elevenlabs_voice_id`（去 ElevenLabs voice library 抓一个），可选 `elevenlabs_model_id`（`eleven_flash_v2_5` 低延迟，`eleven_multilingual_v2` 高质量）。
+- `system_voice: Tingting`——选 macOS 语音（`say -v '?'` 列所有）
+- `tts_provider: openai` + `openai_api_key: sk-...`——用 OpenAI TTS
+- `tts_provider: elevenlabs` + `elevenlabs_api_key: ...` + `elevenlabs_voice_id: ...`
+- `quiet_hours.start / end`——夜间静音（不影响 notification）
+- `summary_max_chars: 80`——念多少字符就截断
 
-env 变量优先级高于 yaml。没填 key server 也能跑——工具打 `[readless] (no-key, provider=...)` 到 stderr，再写入 JSONL log。拿到 key 之前先把 MCP 链路调通很方便。
+详见 [`config.example.yaml`](./config.example.yaml)。
 
-## 注册到 Claude Code
+## 为什么不会闪报错
 
-```bash
-claude mcp add --scope user readless -- "$(pwd)/.venv/bin/python" -m readless.server
-claude mcp list
-```
+hook 脚本（`hooks/readless_hook.py`）照搬了 [open-vibe-island](https://github.com/Octane0411/open-vibe-island) 的 fail-open 模式：
 
-必须用 venv python 的绝对路径——Claude Code 启动 server 时用的是它自己的 `$PATH`。`--scope user` 表示在所有项目里都可用。
+1. **永远 `exit 0`**——hook 进程不可能以非零状态退出
+2. **顶层 `try / except: pass`** 吞掉所有异常
+3. **stdout 一个字不写**（Stop / Notification 都不需要返回 directive JSON）
+4. **fork 出子进程，setsid，stdio 重定向到 /dev/null**——真正的 TTS 工作和 Claude Code 的 stdio 完全脱钩，TTS 慢或失败都不可能冒回终端
 
-移除：`claude mcp remove readless --scope user`。
-
-## 告诉 agent 怎么用
-
-把 [CLAUDE_EXAMPLE.md](./CLAUDE_EXAMPLE.md#中文版) 里的**中文版**段落贴到 `~/.claude/CLAUDE.md` 或某个项目的 `CLAUDE.md`（文件里中英两个版本都有，挑你母语对应那段）。这是调节 agent 行为的真正杠杆——如果 agent 太啰嗦或太安静，改这个段落，不是改代码。
-
-## 验证
-
-1. `claude mcp list` 显示 `readless ✓`。
-2. Claude Code 里 `/mcp` 能看到 readless 的三个工具。
-3. 让 agent："call readless.speak_summary with headline='test'。"
-   - 还没填 key → 工具返回 `tts_no_key_logged`，检查 `~/.readless/log.jsonl`。
-   - Key 填好 → 笔记本扬声器念出"test"。
+所有异常追加写入 `~/.readless/log.jsonl` 供调试。
 
 ## 日志
 
-所有工具调用追加写入 `~/.readless/log.jsonl`：
-
 ```json
-{"ts": "2026-04-24T10:15:03+08:00", "kind": "summary", "headline": "测试通过", "details": "3 files modified"}
+{"ts": "2026-05-14T22:30:00+08:00", "kind": "stop", "headline": "构建通过，3 个测试都过了。"}
+{"ts": "2026-05-14T22:31:12+08:00", "kind": "notification", "headline": "Claude needs your permission to run Bash"}
 ```
-
-## 排错
-
-- **没声音但也没报错**：`OPENAI_API_KEY` 没设。看 stderr 里的 `[readless] (no-key)` 行，或者改 yaml。
-- **`sd.PortAudioError: Error querying device`**：音频输出设备缺失或变化。插耳机或在系统设置 → 声音里选个默认输出。
-- **Claude Code 看不到 server**：跑 `claude mcp list`——如果没显示，用 venv python 的绝对路径重新跑 `claude mcp add`。加完之后重启 Claude Code。
-- **频繁返回 `throttled`**：设计如此——`speak_status` 限频 1 次/分钟。想更密就把 yaml 里的 `status_throttle_seconds` 调小。
 
 ## 协议
 
 Apache 2.0——见 [LICENSE](./LICENSE)。
 
-## 设计要点
-
-- `speak_status` 限频在服务端做，重启不保留状态。Agent "调得太频"不算错误。
-- `speak_blocker` 会打断正在播报的语音并忽略静音时段——既然你启动了长任务，那应该有精力来解锁。
-- 没有终端反向总结、没有 STT、没有多 TTS backend 抽象。v1 故意做薄。
-
 ## 结构
 
 ```
+.claude-plugin/
+  plugin.json          声明 Stop + Notification hook
+  marketplace.json     /plugin marketplace add 用的清单
+hooks/
+  readless_hook.py     封口入口；fork + detach
 src/readless/
-  server.py    FastMCP 入口 + 工具定义
-  tts.py       OpenAI 流式 -> sounddevice + 无 key / 失败回落
-  config.py    YAML + 环境变量加载 + 静音时段计算
-  throttle.py  StatusThrottle（带测试）
-  logger.py    JSONL 追加写
-tests/
-  test_throttle.py
+  hook_runner.py       事件分发 -> speak()
+  tts.py               system / openai / elevenlabs 后端
+  config.py            YAML 加载 + 静音时段计算
+  logger.py            JSONL 追加写日志
 ```

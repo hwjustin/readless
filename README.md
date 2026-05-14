@@ -2,110 +2,81 @@
 
 [English](./README.md) · [中文](./README.zh.md)
 
-Local MCP server that lets Claude Code (and other MCP-aware agents) speak status, summaries, and blocking questions out loud via OpenAI or ElevenLabs TTS. Designed so you can step away from the screen during long agent tasks without losing situational awareness.
+Claude Code plugin that speaks each turn's last message and pings you when the agent is waiting for input — so you can walk away from a long task without losing the thread.
 
-Three tools exposed to the agent:
+Two hooks, zero MCP wiring, no `CLAUDE.md` block to paste:
 
-| Tool | When to call | Max words spoken |
+| Hook | When it fires | What it does |
 |---|---|---|
-| `speak_summary(headline, details="")` | Task the user will care about is done | ~50 |
-| `speak_status(message)` | Progress heartbeat during long tasks (server throttles to 1/min) | ~10 |
-| `speak_blocker(question)` | Agent is stuck; needs user input. Bypasses quiet hours, interrupts speech. | ~20 |
+| `Stop` | Assistant finishes a turn | Reads the last assistant message and speaks a short summary |
+| `Notification` | Claude Code needs permission or has been idle | Interrupts current speech and says what's blocking |
 
-## Quick start
+Default TTS backend is your OS's built-in voice (macOS `say`, Linux `espeak-ng`, Windows SAPI) — **no API key required**. Set one in the config to upgrade to OpenAI or ElevenLabs voices.
 
-```bash
-git clone https://github.com/hwjustin/readless.git
-cd readless
-./install.sh
-# then edit ~/.readless/config.yaml to paste your OPENAI_API_KEY,
-# paste the block from CLAUDE_EXAMPLE.md into ~/.claude/CLAUDE.md,
-# restart Claude Code, and ask it to call speak_summary.
+## Install
+
+```
+/plugin marketplace add hwjustin/readless
+/plugin install readless
 ```
 
-`install.sh` is idempotent: creates the venv, `pip install -e .`, seeds `~/.readless/config.yaml` from the example, and runs `claude mcp add --scope user`. Re-run anytime — it skips steps already done.
+**No pip install needed for the default `system` backend** — the hook walks up to `src/` inside the plugin directory and imports `readless` from there, and the default backend has zero dependencies beyond Python 3.11+.
 
-## Install (detail)
-
-```bash
-python3 -m venv .venv
-.venv/bin/pip install -e .
-```
-
-On macOS, `sounddevice` needs PortAudio. If the install errors on it:
+For cloud TTS, install extras into whatever Python `/usr/bin/env python3` resolves to:
 
 ```bash
-brew install portaudio
+pip install --user 'readless[openai] @ git+https://github.com/hwjustin/readless.git'
+# or
+pip install --user 'readless[elevenlabs] @ git+https://github.com/hwjustin/readless.git'
 ```
 
-## Configure
+That's it. Open Claude Code, run a turn, hear the summary.
 
-Copy [`config.example.yaml`](./config.example.yaml) to `~/.readless/config.yaml`. First launch also auto-creates a default config if one doesn't exist.
+## Configure (optional)
 
-Pick your TTS backend with `tts_provider`:
+The first run auto-creates `~/.readless/config.yaml` from defaults. Edit it to:
 
-- `openai` (default) — paste `openai_api_key` or set `OPENAI_API_KEY`. Voice options: `alloy`/`echo`/`fable`/`onyx`/`nova`/`shimmer`.
-- `elevenlabs` — paste `elevenlabs_api_key` or set `ELEVENLABS_API_KEY`. Set `elevenlabs_voice_id` (grab one from the ElevenLabs voice library) and optionally `elevenlabs_model_id` (`eleven_flash_v2_5` for low latency, `eleven_multilingual_v2` for quality).
+- `system_voice: Tingting` — pick a macOS voice (run `say -v '?'` to list)
+- `tts_provider: openai` + `openai_api_key: sk-...` — use OpenAI TTS
+- `tts_provider: elevenlabs` + `elevenlabs_api_key: ...` + `elevenlabs_voice_id: ...`
+- `quiet_hours.start / end` — silence per-turn summaries at night (notifications still play)
+- `summary_max_chars: 80` — cap on how much of the last message gets spoken
 
-Env var wins over the yaml. Without a key the server still runs — tools print `[readless] (no-key, provider=...)` to stderr and log to JSONL. Useful for wiring up the MCP connection before the key lands.
+See [`config.example.yaml`](./config.example.yaml).
 
-## Register with Claude Code
+## How it stays silent on errors
 
-```bash
-claude mcp add --scope user readless -- "$(pwd)/.venv/bin/python" -m readless.server
-claude mcp list
-```
+The hook script (`hooks/readless_hook.py`) follows the same fail-open pattern as [open-vibe-island](https://github.com/Octane0411/open-vibe-island):
 
-Absolute python path matters — Claude Code spawns the server with its own `$PATH`. `--scope user` makes the server available across every project.
+1. Always exits 0 — never raises a non-zero status
+2. Top-level `try / except: pass` swallows every exception
+3. Writes nothing to stdout (Stop / Notification don't need a directive)
+4. Forks a child, calls `setsid`, redirects stdio to `/dev/null` — the TTS work is fully detached from Claude Code's stdio, so a slow or failing API call can't leak into your terminal
 
-To remove: `claude mcp remove readless --scope user`.
-
-## Tell your agent to use it
-
-Paste the **English version** block from [CLAUDE_EXAMPLE.md](./CLAUDE_EXAMPLE.md#english-version) into `~/.claude/CLAUDE.md` or a project `CLAUDE.md` (the file has both Chinese and English blocks — pick the one matching your primary language). This is the actual lever for tuning behavior — if the agent is too chatty or too silent, edit that block, not the code.
-
-## Verify
-
-1. `claude mcp list` shows `readless ✓`.
-2. In Claude Code, `/mcp` lists readless with three tools.
-3. Ask: "Call readless.speak_summary with headline='test'." 
-   - No key yet → tool returns `tts_no_key_logged`; check `~/.readless/log.jsonl`.
-   - Key set → laptop speaker plays "test".
+All errors get appended to `~/.readless/log.jsonl` for debugging.
 
 ## Logs
 
-All tool calls append to `~/.readless/log.jsonl`:
-
 ```json
-{"ts": "2026-04-24T10:15:03+08:00", "kind": "summary", "headline": "测试通过", "details": "3 files modified"}
+{"ts": "2026-05-14T22:30:00+08:00", "kind": "stop", "headline": "Build succeeded. 3 tests passed."}
+{"ts": "2026-05-14T22:31:12+08:00", "kind": "notification", "headline": "Claude needs your permission to run Bash"}
 ```
-
-## Troubleshooting
-
-- **No sound but no error**: `OPENAI_API_KEY` not set. Check stderr for `[readless] (no-key)` lines, or edit the yaml.
-- **`sd.PortAudioError: Error querying device`**: audio output device missing/changed. Plug in headphones or pick a default output in System Settings → Sound.
-- **Claude Code doesn't see the server**: run `claude mcp list` — if missing, re-run the `claude mcp add` command with the absolute venv python path. Restart Claude Code after adding.
-- **Tool returns `throttled` a lot**: by design — `speak_status` caps at one speech per minute. Lower `status_throttle_seconds` in the yaml if you want tighter pings.
 
 ## License
 
 Apache 2.0 — see [LICENSE](./LICENSE).
 
-## Design notes
-
-- `speak_status` throttling is server-side and stateless across restarts. The agent calling "too often" is not an error condition.
-- `speak_blocker` interrupts in-progress speech and ignores quiet hours — if you started a long task you're presumably awake enough to unblock it.
-- No terminal reverse-summarization, no STT, no multi-TTS-backend abstraction. v1 is deliberately thin.
-
 ## Structure
 
 ```
+.claude-plugin/
+  plugin.json          Stop + Notification hook declarations
+  marketplace.json     marketplace metadata for /plugin marketplace add
+hooks/
+  readless_hook.py     sealed-stdio entry point; forks + detaches
 src/readless/
-  server.py    FastMCP entrypoint + tool definitions
-  tts.py       OpenAI streaming -> sounddevice + no-key/failure fallback
-  config.py    YAML + env var loader + quiet-hours math
-  throttle.py  StatusThrottle (tested)
-  logger.py    JSONL append
-tests/
-  test_throttle.py
+  hook_runner.py       event dispatch -> speak()
+  tts.py               system / openai / elevenlabs backends
+  config.py            YAML loading + quiet-hours math
+  logger.py            JSONL append-only log
 ```
