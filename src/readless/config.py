@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, time
 from pathlib import Path
 from typing import Any, Optional
@@ -97,14 +97,26 @@ elevenlabs_model_id: "eleven_flash_v2_5"
 
 speed: 1.1                # 1.0 - 1.3 (openai only)
 language_hint: zh
-summary_max_chars: 80     # cap length of spoken per-turn summary
 
 quiet_hours:
-  start: "23:00"          # per-turn summaries silenced inside this window
-  end: "08:00"            # notifications always play
+  start: "23:00"          # speak_summary / speak_status silenced inside this window
+  end: "08:00"            # speak_blocker always plays
 
+tools:
+  speak_status: true
+  speak_summary: true
+  speak_blocker: true
+
+status_throttle_seconds: 60
 log_path: ~/.readless/log.jsonl
 """
+
+
+@dataclass
+class ToolToggles:
+    speak_status: bool = True
+    speak_summary: bool = True
+    speak_blocker: bool = True
 
 
 @dataclass
@@ -118,9 +130,10 @@ class Config:
     elevenlabs_model_id: str = "eleven_flash_v2_5"
     speed: float = 1.1
     language_hint: str = "zh"
-    summary_max_chars: int = 80
     quiet_start: Optional[time] = time(23, 0)
     quiet_end: Optional[time] = time(8, 0)
+    tools: ToolToggles = field(default_factory=ToolToggles)
+    status_throttle_seconds: int = 60
     log_path: Path = Path("~/.readless/log.jsonl").expanduser()
 
     @property
@@ -159,6 +172,7 @@ def load_config() -> Config:
     raw = _parse_yaml(CONFIG_PATH.read_text())
 
     qh = raw.get("quiet_hours") or {}
+    tools_raw = raw.get("tools") or {}
     key = os.environ.get("OPENAI_API_KEY") or raw.get("openai_api_key") or ""
     el_key = os.environ.get("ELEVENLABS_API_KEY") or raw.get("elevenlabs_api_key") or ""
 
@@ -176,8 +190,13 @@ def load_config() -> Config:
         elevenlabs_model_id=raw.get("elevenlabs_model_id", "eleven_flash_v2_5"),
         speed=float(raw.get("speed", 1.1)),
         language_hint=raw.get("language_hint", "zh"),
-        summary_max_chars=int(raw.get("summary_max_chars", 80)),
         quiet_start=_parse_time(qh.get("start")),
         quiet_end=_parse_time(qh.get("end")),
+        tools=ToolToggles(
+            speak_status=bool(tools_raw.get("speak_status", True)),
+            speak_summary=bool(tools_raw.get("speak_summary", True)),
+            speak_blocker=bool(tools_raw.get("speak_blocker", True)),
+        ),
+        status_throttle_seconds=int(raw.get("status_throttle_seconds", 60)),
         log_path=Path(raw.get("log_path", "~/.readless/log.jsonl")).expanduser(),
     )
