@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import shutil
+import subprocess
 import sys
 import traceback
 from typing import Iterator
@@ -14,6 +16,7 @@ CHUNK_BYTES = 4096
 _speech_lock = asyncio.Lock()
 _cancel_flag = asyncio.Event()
 _active_stream = None
+_active_proc: subprocess.Popen | None = None
 
 
 def _warn(msg: str) -> None:
@@ -21,6 +24,11 @@ def _warn(msg: str) -> None:
 
 
 async def speak(text: str, cfg: Config, interrupt: bool = False) -> str:
+    if cfg.tts_provider == "system":
+        if interrupt:
+            _stop_system_proc()
+        return await asyncio.to_thread(_speak_system, text, cfg)
+
     if not cfg.has_tts_key:
         _warn(f"(no-key, provider={cfg.tts_provider}) {text}")
         return "tts_no_key_logged"
@@ -42,6 +50,66 @@ async def speak(text: str, cfg: Config, interrupt: bool = False) -> str:
             traceback.print_exc(file=sys.stderr)
             _warn(f"TTS failed ({e.__class__.__name__}): {text}")
             return "tts_failed_but_logged"
+
+
+def _stop_system_proc() -> None:
+    global _active_proc
+    if _active_proc is not None and _active_proc.poll() is None:
+        try:
+            _active_proc.terminate()
+        except Exception:
+            pass
+
+
+def _speak_system(text: str, cfg: Config) -> str:
+    global _active_proc
+    _stop_system_proc()
+    try:
+        cmd = _system_cmd(text, cfg)
+    except RuntimeError as e:
+        _warn(f"system tts unavailable: {e}")
+        return "system_unavailable_logged"
+    try:
+        _active_proc = subprocess.Popen(
+            cmd,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        _active_proc.wait()
+        return "spoken"
+    except Exception as e:
+        _warn(f"system tts failed ({e.__class__.__name__}): {text}")
+        return "tts_failed_but_logged"
+
+
+def _system_cmd(text: str, cfg: Config) -> list[str]:
+    voice = (cfg.system_voice or "").strip()
+    if sys.platform == "darwin":
+        if not shutil.which("say"):
+            raise RuntimeError("`say` not found")
+        cmd = ["say"]
+        if voice:
+            cmd += ["-v", voice]
+        cmd.append(text)
+        return cmd
+    if sys.platform.startswith("linux"):
+        binary = shutil.which("espeak-ng") or shutil.which("espeak")
+        if not binary:
+            raise RuntimeError("`espeak-ng` not found; install with: apt install espeak-ng")
+        cmd = [binary, "-v", voice or (cfg.language_hint or "zh"), text]
+        return cmd
+    if sys.platform == "win32":
+        # SAPI via PowerShell. Escape double quotes inside the spoken text.
+        safe = text.replace('"', '`"')
+        ps = (
+            "Add-Type -AssemblyName System.Speech;"
+            "$s = New-Object System.Speech.Synthesis.SpeechSynthesizer;"
+            + (f"$s.SelectVoice('{voice}');" if voice else "")
+            + f'$s.Speak("{safe}")'
+        )
+        return ["powershell", "-NoProfile", "-Command", ps]
+    raise RuntimeError(f"unsupported platform: {sys.platform}")
 
 
 def _iter_pcm(text: str, cfg: Config) -> Iterator[bytes]:
