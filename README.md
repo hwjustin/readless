@@ -81,7 +81,7 @@ See [`config.example.yaml`](./config.example.yaml).
 All tool calls append to `~/.readless/log.jsonl`:
 
 ```json
-{"ts": "2026-05-14T22:30:00+08:00", "kind": "summary", "headline": "构建通过，3 个测试都过了", "details": ""}
+{"ts": "2026-05-14T22:30:00+08:00", "kind": "summary", "headline": "Build passed, all 3 tests green", "details": ""}
 ```
 
 ## License
