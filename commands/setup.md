@@ -49,7 +49,7 @@ Claude Code merges `~/.claude/CLAUDE.md` into every session. Without this block,
 
 3. If already present, do nothing — tell the user the block is there. They can edit between the markers if they want different behavior.
 
-4. If not present, append the chosen language block from `${CLAUDE_PLUGIN_ROOT}/CLAUDE_EXAMPLE.md` to `~/.claude/CLAUDE.md`. Wrap it with markers so future runs can detect and update it:
+4. If not present, build the full marker-wrapped block by taking the chosen language section from `${CLAUDE_PLUGIN_ROOT}/CLAUDE_EXAMPLE.md` and wrapping it like this:
    ```
    <!-- readless:begin -->
    <!-- managed by /readless:setup — edit freely; keep these markers for idempotent updates -->
@@ -58,9 +58,21 @@ Claude Code merges `~/.claude/CLAUDE.md` into every session. Without this block,
 
    <!-- readless:end -->
    ```
-   Create `~/.claude/CLAUDE.md` if it doesn't exist. Add a blank line before the block if the file already had content.
 
-5. Show the user the appended snippet so they know what was added.
+5. **Print the full block to the user first**, with this framing (in their language):
+   > "I'll try to append the block below to `~/.claude/CLAUDE.md`. If the auto-mode classifier blocks the write or you decline the permission prompt, just paste it in yourself — same effect. After that, restart Claude Code."
+   >
+   > ```
+   > [full marker-wrapped block here, fenced so it's easy to copy]
+   > ```
+
+   Doing this **before** attempting the write means the user always has a manual fallback if anything goes wrong with the next step. Don't skip it even when you expect the write to succeed.
+
+6. Then attempt to append the block to `~/.claude/CLAUDE.md` (create the file if missing; add a blank line before the block if the file already had content).
+
+7. Report the outcome honestly:
+   - **Write succeeded** → "✓ Appended to `~/.claude/CLAUDE.md`. Restart Claude Code to activate."
+   - **Write was denied / failed for any reason** → "✗ Could not write `~/.claude/CLAUDE.md` automatically (auto-mode classifier or permission decline). Paste the block above into `~/.claude/CLAUDE.md` yourself, then restart Claude Code." **Do not claim setup succeeded when the file wasn't actually written.**
 
 ## Step 3 — Tell the user how to switch to OpenAI / ElevenLabs (optional, secure)
 
