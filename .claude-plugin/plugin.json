@@ -1,11 +1,5 @@
 {
   "name": "readless",
-  "version": "1.0.0",
-  "description": "Speak Claude Code activity out loud while you're AFK — agent-callable speak_summary / speak_status / speak_blocker tools. Default backend is edge-tts (free, online, bilingual, no API key).",
-  "mcpServers": {
-    "readless": {
-      "command": "uvx",
-      "args": ["--from", "readless-mcp", "readless"]
-    }
-  }
+  "version": "1.0.1",
+  "description": "Speak Claude Code activity out loud while you're AFK — agent-callable speak_summary / speak_status / speak_blocker tools. Default backend is edge-tts (free, online, bilingual, no API key)."
 }

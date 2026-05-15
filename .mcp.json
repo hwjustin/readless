@@ -1,0 +1,6 @@
+{
+  "readless": {
+    "command": "uvx",
+    "args": ["--from", "readless-mcp", "readless"]
+  }
+}

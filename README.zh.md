@@ -92,8 +92,9 @@ Apache 2.0——见 [LICENSE](./LICENSE)。
 
 ```
 .claude-plugin/
-  plugin.json          声明 readless MCP server
+  plugin.json          插件元信息（name / version / description）
   marketplace.json     /plugin marketplace add 用的清单
+.mcp.json              MCP server 声明（uvx --from readless-mcp readless）
 commands/
   setup.md             /readless:setup —— 确认 uv 已安装 + 写 CLAUDE.md
 src/readless/

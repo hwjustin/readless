@@ -92,8 +92,9 @@ Apache 2.0 — see [LICENSE](./LICENSE).
 
 ```
 .claude-plugin/
-  plugin.json          declares the readless MCP server
+  plugin.json          plugin metadata (name, version, description)
   marketplace.json     /plugin marketplace add metadata
+.mcp.json              MCP server declaration (uvx --from readless-mcp readless)
 commands/
   setup.md             /readless:setup — ensure `uv` is installed + CLAUDE.md append
 src/readless/
