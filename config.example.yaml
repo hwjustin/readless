@@ -38,9 +38,11 @@ system_voice: ""
 
 language_hint: zh
 
-quiet_hours:
-  start: "23:00"          # speak_summary / speak_status silenced inside this window
-  end: "08:00"            # speak_blocker always plays
+# quiet_hours disabled by default. Uncomment to silence speak_summary/speak_status
+# in a window (speak_blocker always plays through quiet hours):
+# quiet_hours:
+#   start: "23:00"
+#   end: "08:00"
 
 tools:
   speak_status: true

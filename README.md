@@ -66,7 +66,7 @@ Env vars `OPENAI_API_KEY` / `ELEVENLABS_API_KEY` always override the config file
 - `edge_rate: "+20%"` — speed up the default voice
 - `tts_provider: system` — force OS-native TTS (useful for fully offline machines)
 - `system_voice: Tingting` — pick a macOS voice (`say -v '?'` to list)
-- `quiet_hours.start / end` — silence `speak_summary` / `speak_status` at night (`speak_blocker` still plays)
+- `quiet_hours.start / end` — opt-in night-silencing for `speak_summary` / `speak_status` (off by default; `speak_blocker` still plays even if enabled)
 - `tools.speak_status: false` (etc.) — disable individual tools
 - `status_throttle_seconds: 60` — limit `speak_status` rate
 

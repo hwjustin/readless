@@ -66,7 +66,7 @@ uvx --from 'readless-mcp[elevenlabs]' readless-setkey elevenlabs
 - `edge_rate: "+20%"`——调语速
 - `tts_provider: system`——强制走系统自带 TTS（完全离线场景）
 - `system_voice: Tingting`——选 macOS 语音（`say -v '?'` 列所有）
-- `quiet_hours.start / end`——夜间静音（不影响 `speak_blocker`）
+- `quiet_hours.start / end`——按需开启的夜间静音（默认关；开了也不影响 `speak_blocker`）
 - `tools.speak_status: false` 等——单独关闭某个工具
 - `status_throttle_seconds: 60`——`speak_status` 限频
 

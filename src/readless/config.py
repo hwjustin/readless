@@ -108,9 +108,11 @@ system_voice: ""
 
 language_hint: zh
 
-quiet_hours:
-  start: "23:00"          # speak_summary / speak_status silenced inside this window
-  end: "08:00"            # speak_blocker always plays
+# quiet_hours disabled by default. Uncomment to silence speak_summary/speak_status
+# in a window (speak_blocker always plays through quiet hours):
+# quiet_hours:
+#   start: "23:00"
+#   end: "08:00"
 
 tools:
   speak_status: true
@@ -142,8 +144,8 @@ class Config:
     elevenlabs_model_id: str = "eleven_flash_v2_5"
     system_voice: str = ""
     language_hint: str = "zh"
-    quiet_start: Optional[time] = time(23, 0)
-    quiet_end: Optional[time] = time(8, 0)
+    quiet_start: Optional[time] = None
+    quiet_end: Optional[time] = None
     tools: ToolToggles = field(default_factory=ToolToggles)
     status_throttle_seconds: int = 60
     log_path: Path = Path("~/.readless/log.jsonl").expanduser()
