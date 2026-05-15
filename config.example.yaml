@@ -1,29 +1,51 @@
 # Copy to ~/.readless/config.yaml. Plugin auto-creates this file on first run.
-# Default (system) needs no API key — it uses your OS's built-in voice.
+# Default backend `edge` uses Microsoft's free online TTS — no API key needed.
 
-tts_provider: system      # system | openai | elevenlabs
+tts_provider: edge        # edge | openai | elevenlabs | system
 
-# --- system: OS-native TTS, zero dependencies ---
-# macOS:   uses `say`. Voices: `say -v '?'` to list. e.g. "Tingting" (zh), "Samantha" (en)
-# Linux:   uses `espeak-ng` (install: apt install espeak-ng). Voice = language code.
-# Windows: uses PowerShell SAPI. Voice = installed SAPI voice name.
-system_voice: ""          # empty = platform default
+# --- edge: free, online, natural bilingual (recommended default) ---
+# No API key, no signup. Uses Microsoft's public TTS endpoint.
+# `zh-CN-XiaoxiaoNeural` handles Chinese with embedded English well.
+# Other good picks:
+#   zh-CN-YunxiNeural    (male, zh)
+#   zh-CN-YunyangNeural  (male, news anchor)
+#   en-US-AriaNeural     (female, en)
+#   en-US-GuyNeural      (male, en)
+# Full voice list: `edge-tts --list-voices`
+edge_voice: zh-CN-XiaoxiaoNeural
+edge_rate: "+0%"          # "-50%" to "+100%"
 
-# --- OpenAI TTS ---
-openai_api_key: ""        # paste sk-... here, or set OPENAI_API_KEY env var
+# --- openai: requires an API key ---
+# Set it safely via:  readless-setkey openai
+# (Prompts for the key with input hidden, writes here, chmod 600.)
+# Env var OPENAI_API_KEY overrides this field.
+openai_api_key: ""
 voice: alloy              # alloy / echo / fable / onyx / nova / shimmer
+speed: 1.1                # 1.0 - 1.3
 
-# --- ElevenLabs TTS ---
-elevenlabs_api_key: ""                        # or set ELEVENLABS_API_KEY env var
+# --- elevenlabs: requires an API key ---
+# Set it safely via:  readless-setkey elevenlabs
+# Env var ELEVENLABS_API_KEY overrides this field.
+elevenlabs_api_key: ""
 elevenlabs_voice_id: "JBFqnCBsd6RMkjVDRZzb"   # default: "George"
 elevenlabs_model_id: "eleven_flash_v2_5"      # eleven_flash_v2_5 / eleven_multilingual_v2 / eleven_turbo_v2_5
 
-speed: 1.1                # 1.0 - 1.3 (openai only)
-language_hint: zh         # "en", "zh", ...
-summary_max_chars: 80     # max characters spoken for per-turn summary
+# --- system: OS-native TTS, offline fallback when edge can't reach network ---
+# macOS uses `say` (try `say -v '?'` to list voices, e.g. "Tingting" for zh).
+# Linux uses `espeak-ng` (install: apt install espeak-ng).
+# Windows uses PowerShell SAPI. Empty = platform default voice.
+system_voice: ""
+
+language_hint: zh
 
 quiet_hours:
-  start: "23:00"          # per-turn summaries silenced inside this window
-  end: "08:00"            # notifications (blocker pings) always play
+  start: "23:00"          # speak_summary / speak_status silenced inside this window
+  end: "08:00"            # speak_blocker always plays
 
+tools:
+  speak_status: true
+  speak_summary: true
+  speak_blocker: true
+
+status_throttle_seconds: 60
 log_path: ~/.readless/log.jsonl

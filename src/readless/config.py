@@ -20,7 +20,7 @@ def _parse_yaml(text: str) -> dict:
     Supports: top-level `key: value`, one level of nested mapping (`quiet_hours:`),
     inline comments, single/double quoted strings, and bare scalars (true/false/
     numbers/strings). Falls back here when pyyaml isn't installed, so the default
-    `system` TTS backend has zero pip dependencies.
+    `edge` TTS backend has zero extra YAML dependencies.
     """
     if _HAVE_YAML:
         return yaml.safe_load(text) or {}
@@ -76,26 +76,36 @@ def _coerce_scalar(s: str) -> Any:
 CONFIG_DIR = Path.home() / ".readless"
 CONFIG_PATH = CONFIG_DIR / "config.yaml"
 
-VALID_PROVIDERS = ("system", "openai", "elevenlabs")
+VALID_PROVIDERS = ("edge", "openai", "elevenlabs", "system")
 
 DEFAULT_YAML = """\
-tts_provider: system      # system | openai | elevenlabs
+# readless config — auto-created on first run.
+# Default backend `edge` uses Microsoft's free online TTS (no API key needed).
 
-# --- system (OS-native TTS, no API key needed) ---
-# macOS uses `say`, Linux uses `espeak-ng`, Windows uses PowerShell SAPI.
-# Leave system_voice empty for platform default, or e.g. "Tingting" (macOS zh).
-system_voice: ""
+tts_provider: edge        # edge | openai | elevenlabs | system
 
-# --- OpenAI TTS ---
-openai_api_key: ""        # or set OPENAI_API_KEY env var
+# --- edge: free, online, natural bilingual (recommended default) ---
+edge_voice: zh-CN-XiaoxiaoNeural   # handles zh+en code-switching well
+                                    # other good picks:
+                                    #   zh-CN-YunxiNeural    (male, zh)
+                                    #   zh-CN-YunyangNeural  (male, news anchor)
+                                    #   en-US-AriaNeural     (female, en)
+edge_rate: "+0%"          # "-50%" to "+100%"
+
+# --- openai: needs OPENAI_API_KEY (use `readless-setkey openai`) ---
+openai_api_key: ""
 voice: alloy              # alloy / echo / fable / onyx / nova / shimmer
+speed: 1.1                # 1.0 - 1.3
 
-# --- ElevenLabs TTS ---
-elevenlabs_api_key: ""    # or set ELEVENLABS_API_KEY env var
+# --- elevenlabs: needs ELEVENLABS_API_KEY (use `readless-setkey elevenlabs`) ---
+elevenlabs_api_key: ""
 elevenlabs_voice_id: "JBFqnCBsd6RMkjVDRZzb"
 elevenlabs_model_id: "eleven_flash_v2_5"
 
-speed: 1.1                # 1.0 - 1.3 (openai only)
+# --- system: OS-native TTS, offline fallback when edge can't reach network ---
+# macOS `say`, Linux `espeak-ng`, Windows SAPI. Empty = platform default voice.
+system_voice: ""
+
 language_hint: zh
 
 quiet_hours:
@@ -121,14 +131,16 @@ class ToolToggles:
 
 @dataclass
 class Config:
-    tts_provider: str = "system"
-    system_voice: str = ""
+    tts_provider: str = "edge"
+    edge_voice: str = "zh-CN-XiaoxiaoNeural"
+    edge_rate: str = "+0%"
     openai_api_key: str = ""
     voice: str = "alloy"
+    speed: float = 1.1
     elevenlabs_api_key: str = ""
     elevenlabs_voice_id: str = "JBFqnCBsd6RMkjVDRZzb"
     elevenlabs_model_id: str = "eleven_flash_v2_5"
-    speed: float = 1.1
+    system_voice: str = ""
     language_hint: str = "zh"
     quiet_start: Optional[time] = time(23, 0)
     quiet_end: Optional[time] = time(8, 0)
@@ -138,7 +150,7 @@ class Config:
 
     @property
     def has_tts_key(self) -> bool:
-        if self.tts_provider == "system":
+        if self.tts_provider in ("edge", "system"):
             return True
         if self.tts_provider == "elevenlabs":
             return bool(self.elevenlabs_api_key)
@@ -161,14 +173,18 @@ def _parse_time(s: Optional[str]) -> Optional[time]:
     return time(int(hh), int(mm))
 
 
-def _ensure_config_file() -> None:
+def ensure_config_file() -> None:
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     if not CONFIG_PATH.exists():
         CONFIG_PATH.write_text(DEFAULT_YAML)
+        try:
+            CONFIG_PATH.chmod(0o600)
+        except OSError:
+            pass
 
 
 def load_config() -> Config:
-    _ensure_config_file()
+    ensure_config_file()
     raw = _parse_yaml(CONFIG_PATH.read_text())
 
     qh = raw.get("quiet_hours") or {}
@@ -176,19 +192,21 @@ def load_config() -> Config:
     key = os.environ.get("OPENAI_API_KEY") or raw.get("openai_api_key") or ""
     el_key = os.environ.get("ELEVENLABS_API_KEY") or raw.get("elevenlabs_api_key") or ""
 
-    provider = (raw.get("tts_provider") or "system").lower().strip()
+    provider = (raw.get("tts_provider") or "edge").lower().strip()
     if provider not in VALID_PROVIDERS:
-        provider = "system"
+        provider = "edge"
 
     return Config(
         tts_provider=provider,
-        system_voice=str(raw.get("system_voice", "") or ""),
+        edge_voice=str(raw.get("edge_voice", "") or "zh-CN-XiaoxiaoNeural"),
+        edge_rate=str(raw.get("edge_rate", "") or "+0%"),
         openai_api_key=key,
         voice=raw.get("voice", "alloy"),
+        speed=float(raw.get("speed", 1.1)),
         elevenlabs_api_key=el_key,
         elevenlabs_voice_id=raw.get("elevenlabs_voice_id", "JBFqnCBsd6RMkjVDRZzb"),
         elevenlabs_model_id=raw.get("elevenlabs_model_id", "eleven_flash_v2_5"),
-        speed=float(raw.get("speed", 1.1)),
+        system_voice=str(raw.get("system_voice", "") or ""),
         language_hint=raw.get("language_hint", "zh"),
         quiet_start=_parse_time(qh.get("start")),
         quiet_end=_parse_time(qh.get("end")),
