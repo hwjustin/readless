@@ -1,69 +1,81 @@
 ---
-description: Install readless dependencies and add the agent instructions to CLAUDE.md so speak_summary / speak_status / speak_blocker get called. Default TTS is edge-tts (free, online, no API key).
+description: Ensure `uv` is installed and append the readless agent instructions to ~/.claude/CLAUDE.md so speak_summary / speak_status / speak_blocker get called. The MCP server itself is launched by `uvx readless-mcp` — uv provisions Python automatically, no manual pip install or virtualenv.
 ---
 
-You are setting up the `readless` plugin for the user. Two steps: install Python deps, then append the agent instructions to the user's CLAUDE.md. At the end, tell the user how to switch to OpenAI / ElevenLabs safely if they want.
+You are setting up the `readless` plugin for the user. Two steps: confirm `uv` is available (the MCP entry in `plugin.json` uses `uvx`), then append the agent instructions to the user's CLAUDE.md. At the end, tell the user how to switch to OpenAI / ElevenLabs safely if they want.
 
-## Step 1 — Install the readless Python package
+**Why uv instead of pip?** The MCP SDK requires Python ≥3.10, but macOS ships Python 3.9 system-wide. `uv` downloads and caches the right Python for the user automatically, then runs `readless-mcp` from PyPI in an isolated environment. No system-Python contamination, no PEP 668 issues, no venv management for the user.
 
-Claude Code launches MCP servers with `python3` on PATH. The `readless` package and its `mcp` + `edge-tts` dependencies must be importable by that interpreter.
+## Step 1 — Ensure `uv` is on PATH
 
-1. Check which Python is on PATH and whether `readless`, `mcp`, and `edge_tts` are already importable:
+`uvx` is what `plugin.json` calls. If it's missing, the readless MCP server cannot start.
+
+1. Check whether `uvx` is already installed:
    ```bash
-   python3 -c "import readless, mcp, edge_tts; print('readless ok')" 2>&1 || echo "needs install"
+   command -v uvx && uvx --version
    ```
 
-2. If they're missing, install from the plugin source. The plugin root is `${CLAUDE_PLUGIN_ROOT}`. Run:
+2. If it's missing, install it. The official Astral installer drops `uv` / `uvx` into `~/.local/bin/`:
    ```bash
-   pip install --user -e "${CLAUDE_PLUGIN_ROOT}"
+   curl -LsSf https://astral.sh/uv/install.sh | sh
    ```
-   - Default install brings in `edge-tts` so the user has a working, no-key, bilingual TTS backend immediately.
-   - **Do NOT install the `[openai]` or `[elevenlabs]` extras here.** Those backends are opt-in — the user installs them later only if they want to use their own API key (see Step 3 below).
-   - If `pip install --user` fails with "externally-managed-environment" (Homebrew Python on macOS, Debian-style Python on Linux), retry with `--break-system-packages` or set up a dedicated venv and adjust the MCP server `command` in the plugin manifest.
+   - macOS users with Homebrew can use `brew install uv` instead.
+   - Windows users (rare for Claude Code, but possible): `irm https://astral.sh/uv/install.ps1 | iex` in PowerShell.
 
-3. Verify:
+3. **Important:** after install, `~/.local/bin/` must be on `PATH` in the shell Claude Code inherits. The installer usually edits `~/.zshrc` / `~/.bashrc` for the user, but the change only takes effect in **new** shells. Tell the user to **fully restart Claude Code** (not just start a new chat) so the new PATH is picked up.
+
+4. Pre-warm the package so the first MCP startup isn't a 30-second download:
    ```bash
-   python3 -c "import readless.server; print('ok')"
+   uvx --from readless-mcp readless --help 2>/dev/null || echo "(first run will fetch Python + package; that's normal)"
    ```
 
-4. Sanity-check the audio player edge-tts needs for playback:
-   - macOS: `afplay` is built in — no action needed.
-   - Linux: confirm `mpg123` or `ffplay` is installed (`which mpg123 ffplay`). If neither is present, suggest `apt install mpg123` (or `dnf` / `pacman` equivalent).
-   - Windows: PowerShell + MediaPlayer ships with the OS — no action needed.
+5. Sanity-check the audio player for edge-tts playback:
+   - macOS: `afplay` is built in — no action.
+   - Linux: confirm `mpg123` or `ffplay` is installed (`which mpg123 ffplay`). If neither, suggest `apt install mpg123` / `dnf install mpg123` / `pacman -S mpg123`.
+   - Windows: PowerShell + MediaPlayer ships with the OS — no action.
 
 ## Step 2 — Append the agent instructions to ~/.claude/CLAUDE.md
 
-Claude Code merges `~/.claude/CLAUDE.md` into every session. Without this block, the agent will not know it should call `speak_summary` etc.
+Claude Code merges `~/.claude/CLAUDE.md` into every session. Without this block, the agent does not know it should call `speak_summary` etc.
 
 1. Ask the user which language version they want (default to the language of their previous message):
    - **中文** — for Chinese-speaking users
    - **English** — for English-speaking users
 
-2. Check whether the block is already present:
+2. Check whether the readless block is already present (marker-bounded for idempotency):
    ```bash
-   grep -q "Readless 语音播报规则\|speak_summary" ~/.claude/CLAUDE.md 2>/dev/null && echo "already present" || echo "needs append"
+   grep -q "<!-- readless:begin -->" ~/.claude/CLAUDE.md 2>/dev/null && echo "already present" || echo "needs append"
    ```
 
-3. If it's not present, append the appropriate block from `${CLAUDE_PLUGIN_ROOT}/CLAUDE_EXAMPLE.md`. Read that file to get both language blocks; the file separates them with `## 中文版` and `## English version` headings. Extract the user's chosen block (everything from its `#` heading down to the next `---` or end of file) and append to `~/.claude/CLAUDE.md`. Create the file if it doesn't exist. Add a blank line before the appended content.
+3. If already present, do nothing — tell the user the block is there. They can edit between the markers if they want different behavior.
 
-4. Confirm to the user what was appended (show them the snippet) so they can edit it later if they want different behavior.
+4. If not present, append the chosen language block from `${CLAUDE_PLUGIN_ROOT}/CLAUDE_EXAMPLE.md` to `~/.claude/CLAUDE.md`. Wrap it with markers so future runs can detect and update it:
+   ```
+   <!-- readless:begin -->
+   <!-- managed by /readless:setup — edit freely; keep these markers for idempotent updates -->
+
+   ...the chosen language block from CLAUDE_EXAMPLE.md...
+
+   <!-- readless:end -->
+   ```
+   Create `~/.claude/CLAUDE.md` if it doesn't exist. Add a blank line before the block if the file already had content.
+
+5. Show the user the appended snippet so they know what was added.
 
 ## Step 3 — Tell the user how to switch to OpenAI / ElevenLabs (optional, secure)
 
-After Step 1 the user already has a working TTS — `edge-tts` with the `zh-CN-XiaoxiaoNeural` voice, free, online, no key. **Most users should stop here.**
+After Step 1+2 the user already has a working TTS — `edge-tts` with the `zh-CN-XiaoxiaoNeural` voice, free, online, no key. **Most users should stop here.**
 
-If the user wants to use OpenAI or ElevenLabs voices instead, tell them exactly this (do not ask them to paste the key into this chat — keys pasted here would land in the conversation context and the transcript):
+If the user wants OpenAI or ElevenLabs voices, tell them exactly this (do NOT ask them to paste the key into this chat — keys pasted here would land in the conversation context and the transcript):
 
 > "If you'd rather use OpenAI or ElevenLabs voices, do this **in your own terminal** (not via me):
 >
 > ```bash
 > # For OpenAI:
-> pip install --user -e '${CLAUDE_PLUGIN_ROOT}[openai]'
-> readless-setkey openai
+> uvx --from 'readless-mcp[openai]' readless-setkey openai
 >
 > # For ElevenLabs:
-> pip install --user -e '${CLAUDE_PLUGIN_ROOT}[elevenlabs]'
-> readless-setkey elevenlabs
+> uvx --from 'readless-mcp[elevenlabs]' readless-setkey elevenlabs
 > ```
 >
 > `readless-setkey` will prompt you to paste the key with input hidden, write it to `~/.readless/config.yaml` (chmod 600), and flip `tts_provider` for you. The key never enters the Claude conversation."
@@ -76,14 +88,4 @@ If the user wants to use OpenAI or ElevenLabs voices instead, tell them exactly 
 
 ## Step 4 — Tell the user to restart Claude Code
 
-The MCP server connection is established at session start. After installing the Python package, the user must restart Claude Code (close and reopen, or in CLI mode just start a fresh session) for `readless` to appear under `/mcp`.
-
-Suggest:
-> "Restart Claude Code, then run `/mcp` — you should see `readless ✓ Connected` with three tools. Try saying 'hello' to me to hear the first voice summary."
-
-## Notes
-
-- Default TTS backend is `edge` — uses Microsoft's free online TTS endpoint, no API key, handles Chinese + English code-switching naturally. If it can't reach the network, the server automatically falls back to the OS-native `system` backend (macOS `say` / Linux `espeak-ng` / Windows SAPI).
-- `~/.readless/config.yaml` is auto-created on first run. To change voice, rate, or quiet hours, edit it directly.
-- Env vars `OPENAI_API_KEY` / `ELEVENLABS_API_KEY` always override the config file — handy if the user prefers shell-rc-managed secrets.
-- All tool calls are logged to `~/.readless/log.jsonl`.
+The MCP server connection is established at session start, and any new PATH from the uv installer also requires a fresh shell. After Steps 1 and 2, the user must **fully restart Claude Code** (close and reopen the CLI / IDE host, not just start a new chat) for `readless` to appear under `/mcp` as `✓ Connected`.

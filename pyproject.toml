@@ -3,8 +3,8 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "readless"
-version = "0.4.0"
+name = "readless-mcp"
+version = "1.0.0"
 description = "Claude Code plugin (MCP server) that speaks status, summaries, and blockers via edge-tts (free, online, bilingual) with optional OpenAI / ElevenLabs / OS-native backends."
 readme = "README.md"
 requires-python = ">=3.10"

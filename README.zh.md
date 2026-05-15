@@ -16,33 +16,42 @@ Claude Code 插件（MCP 模式），让 agent 主动把状态、总结、阻塞
 
 ## 安装
 
+只需要 PATH 上有 `uv`（[Astral 的 Python 启动器](https://github.com/astral-sh/uv)）—— 就这一个前置条件。`uv` 会自动准备 Python，你不用自己装 Python 3.10+，也不用管 virtualenv。
+
+```bash
+# 1. 装 uv（如果已经有就跳过）
+curl -LsSf https://astral.sh/uv/install.sh | sh        # macOS / Linux
+# brew install uv                                       # macOS 用 Homebrew
+# irm https://astral.sh/uv/install.ps1 | iex            # Windows PowerShell
+```
+
+然后在 Claude Code 里：
+
 ```
 /plugin marketplace add hwjustin/readless
 /plugin install readless
 /readless:setup
 ```
 
-`/readless:setup` 命令做两件事：
+`/readless:setup` 做两件事：
 
-1. 跑 `pip install --user -e ${CLAUDE_PLUGIN_ROOT}`，让 `python3 -m readless.server` 能跑起来（plugin manifest 里 MCP 入口启动它）。默认安装会带上 `edge-tts`——开箱就能听到声音，不用任何 key。
-2. 问你要中文还是英文版指令块，然后追加到 `~/.claude/CLAUDE.md`，agent 从此知道每轮要调 `speak_summary`。
+1. 确认 `uv` 在 PATH 上（不在就提示装），并预热 `uvx --from readless-mcp readless`，这样首次 MCP 启动不用等下载。
+2. 问你要中文还是英文版指令块，然后追加到 `~/.claude/CLAUDE.md`（用 marker 包裹，可幂等更新），agent 从此知道每轮要调 `speak_summary`。
 
-完事后重启 Claude Code，`/mcp` 应该显示 `readless ✓ Connected`。
+完事后**彻底重启 Claude Code**（不是开新对话——要把 CLI / IDE 整个关掉重开，新的 PATH 才能被识别）。`/mcp` 应该显示 `readless ✓ Connected`。
 
-> **为什么还有一步 setup？** Claude Code 的 plugin manifest 不支持自动往用户的 CLAUDE.md 注入指令，MCP server 的 Python 依赖也得落到 `python3` 解析到的那个 Python 上。`/readless:setup` 把这两件事一次性确认完。
+> **为什么用 uv？** MCP SDK 要求 Python ≥3.10，但 macOS 系统自带的是 3.9。让用户自己装 Homebrew Python 或者管 venv 是上一版"装不上"的头号原因。`uv` 按需下载合适的 Python 到自己的缓存目录（`~/.cache/uv/`），在隔离环境里跑 PyPI 上的 `readless-mcp`，完全不动系统 Python。这也是 [MCP 官方仓库推荐的方式](https://github.com/modelcontextprotocol/servers)。
 
 ## 换成 OpenAI / ElevenLabs（可选）
 
-默认 edge-tts 对绝大多数人够用。想用 OpenAI 或 ElevenLabs 自家声音的话，**在你自己的终端里**装 extras 并填 key——**不要把 key 粘进 Claude 对话**：
+默认 edge-tts 对绝大多数人够用。想用 OpenAI 或 ElevenLabs 自家声音的话，**在你自己的终端里**填 key——**不要把 key 粘进 Claude 对话**：
 
 ```bash
 # OpenAI
-pip install --user -e "${CLAUDE_PLUGIN_ROOT}[openai]"
-readless-setkey openai            # 提示粘贴 key，输入不回显
+uvx --from 'readless-mcp[openai]' readless-setkey openai     # 提示粘贴 key，输入不回显
 
 # ElevenLabs
-pip install --user -e "${CLAUDE_PLUGIN_ROOT}[elevenlabs]"
-readless-setkey elevenlabs
+uvx --from 'readless-mcp[elevenlabs]' readless-setkey elevenlabs
 ```
 
 `readless-setkey` 用 `getpass` 静默读取 key，写入 `~/.readless/config.yaml`（chmod 600），并自动切换 `tts_provider`。要清掉已保存的 key 用 `readless-setkey clear openai`（或 `elevenlabs`）。
@@ -86,7 +95,7 @@ Apache 2.0——见 [LICENSE](./LICENSE)。
   plugin.json          声明 readless MCP server
   marketplace.json     /plugin marketplace add 用的清单
 commands/
-  setup.md             /readless:setup —— pip install + 写 CLAUDE.md
+  setup.md             /readless:setup —— 确认 uv 已安装 + 写 CLAUDE.md
 src/readless/
   server.py            FastMCP 入口 + 三个工具定义
   tts.py               edge / system / openai / elevenlabs 四种后端
