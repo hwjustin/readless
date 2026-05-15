@@ -1,7 +1,7 @@
 {
   "name": "readless",
-  "version": "0.3.0",
-  "description": "Speak Claude Code activity out loud while you're AFK — agent-callable speak_summary / speak_status / speak_blocker tools via OS-native or API TTS.",
+  "version": "0.4.0",
+  "description": "Speak Claude Code activity out loud while you're AFK — agent-callable speak_summary / speak_status / speak_blocker tools. Default backend is edge-tts (free, online, bilingual, no API key).",
   "mcpServers": {
     "readless": {
       "command": "python3",

@@ -4,14 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "readless"
-version = "0.3.0"
-description = "Claude Code plugin (MCP server) that speaks status, summaries, and blockers via OS-native or API TTS."
+version = "0.4.0"
+description = "Claude Code plugin (MCP server) that speaks status, summaries, and blockers via edge-tts (free, online, bilingual) with optional OpenAI / ElevenLabs / OS-native backends."
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "Justin Wang" }]
 license = { text = "Apache-2.0" }
 dependencies = [
     "mcp>=1.2",
+    "edge-tts>=6.1",
 ]
 
 [project.optional-dependencies]
@@ -22,6 +23,7 @@ all = ["pyyaml>=6.0", "openai>=1.50", "elevenlabs>=1.5", "sounddevice>=0.4.6", "
 
 [project.scripts]
 readless = "readless.server:main"
+readless-setkey = "readless.setkey:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
